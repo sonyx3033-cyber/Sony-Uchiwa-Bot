@@ -1,15 +1,12 @@
 const express = require('express');
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
 const P = require('pino');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
+const PHONE_NUMBER = "243829802986";
 
-app.get('/', (req, res) => {
-  res.send('Sony-Uchiwa-Bot est en ligne! Va dans Logs pour scanner le QR');
-});
-
+app.get('/', (req, res) => res.send('Sony-Uchiwa-Bot en ligne - regarde les Logs pour le CODE'));
 app.listen(PORT, () => console.log(`PORT OPEN on ${PORT}`));
 
 async function startBot() {
@@ -17,37 +14,34 @@ async function startBot() {
   const sock = makeWASocket({
     logger: P({ level: 'silent' }),
     auth: state,
-    browser: ['Sony-Uchiwa-Bot', 'Chrome', '1.0']
+    browser: ['Ubuntu','Chrome','20.0'],
+    printQRInTerminal: false
   });
+
+  if(!sock.authState.creds.registered){
+    setTimeout(async () => {
+      try{
+        let code = await sock.requestPairingCode(PHONE_NUMBER);
+        console.log('======================');
+        console.log('TON CODE PAIRING :', code);
+        console.log('Va dans WhatsApp > Appareils liés > Lier avec numéro');
+        console.log('======================');
+      }catch(e){ console.log('Erreur code:', e.message); }
+    }, 3000);
+  }
 
   sock.ev.on('creds.update', saveCreds);
-
-  sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect, qr } = update;
-    if(qr){
-      console.log('================ QR CODE ================');
-      qrcode.generate(qr, {small: true});
-      console.log('=========================================');
-      console.log('Scanne ce QR avec WhatsApp!');
+  sock.ev.on('connection.update', (update) => {
+    const { connection, lastDisconnect } = update;
+    if(connection === 'open'){
+      console.log('✅ SONY-UCHIWA-BOT CONNECTÉ !');
     }
     if(connection === 'close'){
-      const shouldReconnect = lastDisconnect?.error?.output?.statusCode!== DisconnectReason.loggedOut;
+      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
       if(shouldReconnect) startBot();
-    }
-    if(connection === 'open'){
-      console.log('✅ Sony-Uchiwa-Bot CONNECTÉ!');
-    }
-  });
-
-  sock.ev.on('messages.upsert', async ({messages}) => {
-    const m = messages[0];
-    if(!m.message) return;
-    const text = m.message.conversation || m.message.extendedTextMessage?.text || '';
-    if(text.toLowerCase() === '.ping'){
-      await sock.sendMessage(m.key.remoteJid, {text: 'Pong! Sony-Uchiwa-Bot est en ligne 🔥'});
     }
   });
 }
 
 startBot();
-console.log('Démarrage Sony-Uchiwa-Bot...');
+console.log('Démarrage Sony-Uchiwa-Bot Pairing...');
