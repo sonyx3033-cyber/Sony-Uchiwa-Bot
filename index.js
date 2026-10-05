@@ -1,63 +1,53 @@
 const express = require('express');
-const app = express();
-app.get('/', (req,res)=>res.send('Sony Uchiwa Bot Online'));
-app.listen(process.env.PORT || 3000, ()=>console.log('PORT OPEN'));
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const qrcode = require('qrcode-terminal');
+const P = require('pino');
 
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys')
-const P = require('pino')
+const app = express();
+const PORT = process.env.PORT || 10000;
+
+app.get('/', (req, res) => {
+  res.send('Sony-Uchiwa-Bot est en ligne! Va dans Logs pour scanner le QR');
+});
+
+app.listen(PORT, () => console.log(`PORT OPEN on ${PORT}`));
 
 async function startBot() {
-    const { state, saveCreds } = await useMultiFileAuthState('auth')
-    const sock = makeWASocket({
-        logger: P({ level: 'silent' }),
-        auth: state,
-        printQRInTerminal: true,
-        browser: ["Sony-Uchiwa-Bot", "Chrome", "1.0"]
-    })
+  const { state, saveCreds } = await useMultiFileAuthState('auth');
+  const sock = makeWASocket({
+    logger: P({ level: 'silent' }),
+    auth: state,
+    browser: ['Sony-Uchiwa-Bot', 'Chrome', '1.0']
+  });
 
-    sock.ev.on('creds.update', saveCreds)
+  sock.ev.on('creds.update', saveCreds);
 
-    sock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect } = update
-        if(connection === 'close') {
-            const shouldReconnect = lastDisconnect?.error?.output?.statusCode!== DisconnectReason.loggedOut
-            if(shouldReconnect) startBot()
-        } else if(connection === 'open') {
-            console.log("✅ Sony-Uchiwa-Bot Connecté!")
-        }
-    })
+  sock.ev.on('connection.update', async (update) => {
+    const { connection, lastDisconnect, qr } = update;
+    if(qr){
+      console.log('================ QR CODE ================');
+      qrcode.generate(qr, {small: true});
+      console.log('=========================================');
+      console.log('Scanne ce QR avec WhatsApp!');
+    }
+    if(connection === 'close'){
+      const shouldReconnect = lastDisconnect?.error?.output?.statusCode!== DisconnectReason.loggedOut;
+      if(shouldReconnect) startBot();
+    }
+    if(connection === 'open'){
+      console.log('✅ Sony-Uchiwa-Bot CONNECTÉ!');
+    }
+  });
 
-    sock.ev.on('messages.upsert', async ({ messages }) => {
-        const m = messages[0]
-        if(!m.message) return
-        const text = m.message.conversation || m.message.extendedTextMessage?.text || m.message.imageMessage?.caption || ""
-        const jid = m.key.remoteJid
-
-        if(text.toLowerCase() === "ping") {
-            await sock.sendMessage(jid, { text: "Pong! 🏓 *Sony-Uchiwa-Bot* en ligne depuis Lubumbashi! 🇨🇩🔥" })
-        }
-
-        if(text.toLowerCase() === "menu" || text.toLowerCase() === ".menu") {
-            await sock.sendMessage(jid, { text:
-`╭── *SONY-UCHIWA-BOT* ──╮
-│ 🔥 Bot de Sony Uchiwa │
-│ 📍 Lubumbashi, RDC │
-╰──────────────────╯
-
-*COMMANDES:*
-➡️ ping - Tester le bot
-➡️ menu - Afficher ce menu
-➡️ sony - Info créateur
-
-Bot créé par Sony Uchiwa x3033
-Powered by Baileys` })
-        }
-
-        if(text.toLowerCase() === "sony") {
-            await sock.sendMessage(jid, { text: "👑 Créateur: Sony Uchiwa - Lubumbashi, Katanga 🇨🇩\nGitHub: sonyx3033-cyber" })
-        }
-    })
+  sock.ev.on('messages.upsert', async ({messages}) => {
+    const m = messages[0];
+    if(!m.message) return;
+    const text = m.message.conversation || m.message.extendedTextMessage?.text || '';
+    if(text.toLowerCase() === '.ping'){
+      await sock.sendMessage(m.key.remoteJid, {text: 'Pong! Sony-Uchiwa-Bot est en ligne 🔥'});
+    }
+  });
 }
 
-startBot()
-console.log("Démarrage Sony-Uchiwa-Bot...")
+startBot();
+console.log('Démarrage Sony-Uchiwa-Bot...');
