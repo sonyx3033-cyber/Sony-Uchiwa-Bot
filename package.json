@@ -1,66 +1,48 @@
 // SONY UCHIWA V7 ULTRA - 156 COMMANDES - VERSION CLEAN SANS BLOC LICENCE
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const pino = require('pino');
-const PREFIX = process.env.PREFIX || "💎";
+let PREFIX = ".";
 
 const COMMANDS_LIST = [
-"admincheck","tagadmin",
-"antiaudio","antidemote","antiforbidden","antiimage","antilink","antipromote","antispam","antistatus","antisticker","antitag","antitransfer","antivideo","antibot","anticall","antipurge",
-"autoreact","autovustatut","autowrite","autorecord",
-"deletemedia","listmedia","playaudio","playvideo","sendaudio","senddocument","sendimage","sendsticker","sendvideo","takesticker","tgsticker","tosticker","tomp3","youtube","url","toimage","tovideo","facebook","xvideos",
-"approveall","demote","demute","kick","kickall","mute","promote","block","unblock","clean","resetchat","mystatus","revoke","pin","unpin",
-"getid","getinfo","getpp","groupinfo","getgpp","grouplink",
-"mindset","motivation","quiz","quiz_anime","couple","trivia","devine","morpion","anagramme","scramble","math","meme","blague","excuse","avatar","horoscope","github","pokemon","rickandmorty","ghibli","digimon","disney","chucknorris","conseil","citation","xkcd","carte","catfact","dogpic","neko","gif","unsplash","superhero",
-"vansbot","geolocalisation","ping","searchimage","tiktok","vv","fancy","lyrics","translate","calc","ascii","poll","reminder","schedule","broadcast","removebg","wikipedia","dictionnaire","currency","shorturl","meteo","imagine","qrcode","readqr","compile","setdevice",
-"setpp","setgpp","setgdesc","sendstory","setprefix","vcfgroupe","setprivate","setpublic","setmenuaudio","setmenuvideo","setmenuimage","setlitemode","setfullmode","autodelete","pair","setfont","settheme","language","alwaysonline","chatjid","bug_exp",
-"goodbye","welcome","leave","store","hosting","sudo","instances","restart","tagall","ranking","responder","listcommands","help","doc","menu"
+"admincheck","tagadmin","antiaudio","antilink","antibot","autoreact","autovustatut",
+"deletemedia","playaudio","playvideo","sendaudio","sendvideo","tosticker","youtube",
+"approveall","demote","kick","promote","mute","block","unblock","clean",
+"getid","getinfo","getpp","groupinfo","grouplink","mindset","motivation","quiz",
+"vansbot","geolocalisation","ping","searchimage","tiktok","vv","fancy","lyrics",
+"setpp","setgpp","setgdesc","sendstory","setprefix","goodbye","welcome","leave",
+"store","hosting","sudo","restart","tagall","ranking","listcommands","help","menu"
 ];
 
-console.log(`SONY UCHIWA V7: ${COMMANDS_LIST.length} commandes`);
+console.log("SONY V7: " + COMMANDS_LIST.length + " commandes");
 
 async function startBot(){
 const { state, saveCreds } = await useMultiFileAuthState('./session');
 const sock = makeWASocket({ auth: state, logger: pino({level:'silent'}) });
 sock.ev.on('creds.update', saveCreds);
 sock.ev.on('connection.update', (u)=>{
-if(u.connection==='close' && u.lastDisconnect?.error?.output?.statusCode!== DisconnectReason.loggedOut) startBot();
-if(u.connection==='open') console.log(`✅ SONY CONNECTÉ - ${COMMANDS_LIST.length} CMDS`);
+if(u.connection==='close' && u.lastDisconnect?.error?.output?.statusCode!==DisconnectReason.loggedOut) startBot();
+if(u.connection==='open') console.log("SONY CONNECTE - Prefix: " + PREFIX);
 });
 sock.ev.on('messages.upsert', async ({messages})=>{
 const m = messages[0];
 if(!m.message) return;
 const body = m.message.conversation || m.message.extendedTextMessage?.text || "";
 if(!body.startsWith(PREFIX)) return;
-const args = body.slice(PREFIX.length).trim().split(/\s+/);
+const args = body.slice(PREFIX.length).trim().split(/ +/);
 const cmd = args.shift().toLowerCase();
 
+if(cmd==="setprefix"){
+if(!args[0]) return sock.sendMessage(m.key.remoteJid, {text: "Prefix actuel: " + PREFIX + "\nUsage: " + PREFIX + "setprefix!"},{quoted:m});
+PREFIX = args[0];
+return sock.sendMessage(m.key.remoteJid, {text: "✅ Prefix changé en: " + PREFIX},{quoted:m});
+}
+
 if(cmd==="menu" || cmd==="help"){
-let menu = `🤖 *𝚂𝙾𝙽𝚈 𝚄𝙲𝙷𝙸𝚆𝙰 𝚅𝟽.𝟶 𝚄𝙻𝚃𝚁𝙰* 🤖
-᛭ ─── ❖ ── ✦ ── ❖ ─── ᛭
-
-𝙺𝚗𝚘𝚠 𝚢𝚘𝚞𝚛 𝚙𝚕𝚊𝚌𝚎, 𝗵𝚞𝚖𝚊𝚗.
-
-⛧☠⛧ 👑 𝙰𝚍𝚖𝚒𝚗
-𖤐 ➤ ${PREFIX}𝚊𝚍𝚖𝚒𝚗𝚌𝚑𝚎𝚌𝚔
-𖤐 ➤ ${PREFIX}𝚝𝚊𝚐𝚊𝚍𝚖𝚒𝚗
-
-⛧☠⛧ 🛡️ 𝙰𝚗𝚝𝚒 (𝟷𝟻)
-𖤐 ➤ ${PREFIX}𝚊𝚗𝚝𝚒𝚕𝚒𝚗𝚔, ${PREFIX}𝚊𝚗𝚝𝚒𝚋𝚘𝚝, ${PREFIX}𝚊𝚗𝚝𝚒𝚜𝚙𝚊𝚖
-
-⛧☠⛧ 🎥 𝙼é𝚍𝚒𝚊𝚜 (𝟷𝟿)
-𖤐 ➤ ${PREFIX}𝚙𝚕𝚊𝚢𝚊𝚞𝚍𝚒𝚘, ${PREFIX}𝚢𝚘𝚞𝚝𝚞𝚋𝚎, ${PREFIX}𝚝𝚒𝚔𝚝𝚘𝚔
-
-Tape ${PREFIX}listcommands pour les 156 complètes
-`;
-return sock.sendMessage(m.key.remoteJid, {text: menu}, {quoted: m});
+let txt = "SONY UCHIWA V7 ULTRA\nPrefix: " + PREFIX + "\n" + COMMANDS_LIST.length + " commandes\n\n" + COMMANDS_LIST.map(c=> PREFIX + c).join("\n");
+return sock.sendMessage(m.key.remoteJid, {text: txt}, {quoted: m});
 }
-
-if(cmd==="listcommands"){
-return sock.sendMessage(m.key.remoteJid, {text: `📦 156 COMMANDES:\n${COMMANDS_LIST.map(c=>`💎${c}`).join("\n")}`}, {quoted: m});
-}
-
 if(COMMANDS_LIST.includes(cmd)){
-return sock.sendMessage(m.key.remoteJid, {text: `⛧ SONY V7 ULTRA 👑\n💎${cmd} activé!`}, {quoted: m});
+return sock.sendMessage(m.key.remoteJid, {text: "SONY V7: " + cmd + " active! Prefix: " + PREFIX}, {quoted: m});
 }
 });
 }
